@@ -2192,7 +2192,7 @@ table.widefat.fixed tbody.sortable tr { height:50px; }
         if(!empty($this->data)) foreach($this->data as $row)
         {
 ?>
-        <tr id="item-<?php echo $row[$this->identifier]; ?>" class="iedit">
+        <tr id="item-<?php //echo $row[$this->identifier]; ?>" class="iedit">
 <?php
             foreach($columns as $column=>$attributes)
             {
