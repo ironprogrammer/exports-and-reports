@@ -431,7 +431,7 @@ class WP_Admin_UI
         if('related'!=$attributes['type']||!isset($attributes['related_field']))
             $attributes['related_field'] = 'name';
         if('related'!=$attributes['type']||!isset($attributes['related_multiple']))
-            $attributes['related_multiple'] = false;
+            $attributes['related_multiple'] = true; // can't be set in the front end, so had to default it to true; if we need single select inputs, we'll need to create an input for this attribute in the Report Admin
         if('related'!=$attributes['type']||!isset($attributes['related_sql']))
             $attributes['related_sql'] = false;
         if('related'==$attributes['type']&&(is_array($attributes['related'])||strpos($attributes['related'],',')))
@@ -1044,14 +1044,16 @@ class WP_Admin_UI
                     }
                 }
                 if (empty($column_data) && !empty($selected_options)) {
-                    $limited = " WHERE `{$attributes['related_id']}` IN ('" . implode("', '", $selected_options) . "')";
-                    $related = $wpdb->get_results('SELECT `'.$attributes['related_id'].'`,`'.$attributes['related_field'].'` FROM '.$attributes['related'].(!empty($attributes['related_sql'])?' '.$attributes['related_sql']:$limited));
+                	// take out references to $attributes['related_id']
+                	// instead of using a lookup table for key-value pairs, get DISTINCT values from main table instead
+                    $limited = " WHERE `{$attributes['related_field']}` IN ('" . implode("', '", $selected_options) . "')";
+                    $related = $wpdb->get_results('SELECT `'.$attributes['related_field'].'` FROM '.$attributes['related'].(!empty($attributes['related_sql'])?' '.$attributes['related_sql']:$limited));
                     foreach($related as $option)
-                        if(in_array($option->{$attributes['related_id']}, $selected_options)) {
-                            $column_data[$option->{$attributes['related_id']}] = $option->{$attributes['related_field']};
-                            if (!isset($this->related[$attributes['related'] . '_' . $attributes['related_field'] . '_' . $attributes['related_id']]))
-                                $this->related[$attributes['related'] . '_' . $attributes['related_field'] . '_' . $attributes['related_id']] = array();
-                            $this->related[$attributes['related'] . '_' . $attributes['related_field'] . '_' . $attributes['related_id']][$option->{$attributes['related_id']}] = $option->{$attributes['related_field']};
+                        if(in_array($option->{$attributes['related_field']}, $selected_options)) {
+                            $column_data[$option->{$attributes['related_field']}] = $option->{$attributes['related_field']};
+                            if (!isset($this->related[$attributes['related'] . '_' . $attributes['related_field']]))
+                                $this->related[$attributes['related'] . '_' . $attributes['related_field']] = array();
+                            $this->related[$attributes['related'] . '_' . $attributes['related_field']][$option->{$attributes['related_field']}] = $option->{$attributes['related_field']};
                         }
                 }
             }
@@ -1596,16 +1598,23 @@ class WP_Admin_UI
                             $other_sql[] = "($filterfield BETWEEN '$start' AND '$end')";
                     }
                 }
-                elseif(0<strlen($this->get_var('filter_'.$filter,$this->search_columns[$filter]['filter_default']))&&'related'==$this->search_columns[$filter]['type']&&false!==$this->search_columns[$filter]['related'])
+                elseif((is_array($this->get_var('filter_'.$filter,$this->search_columns[$filter]['filter_default'])) || 0<strlen($this->get_var('filter_'.$filter,$this->search_columns[$filter]['filter_default'])))&&'related'==$this->search_columns[$filter]['type']&&false!==$this->search_columns[$filter]['related'])
                 {
                     if(!is_array($this->search_columns[$filter]['related']))
                     {
+                    	// filter value is coming in as an array, so need to check for it and get
                         $search_value = $this->sanitize($this->get_var('filter_'.$filter,$this->search_columns[$filter]['filter_default']));
-                        if(intval($search_value)<0)
-                            $search_value = "'".$search_value."'";
-                        else
-                            $search_value = intval($search_value);
-                        $related_filterfield = '`'.$filter.'`.`'.$this->search_columns[$filter]['related_id'].'`';
+                        if ( is_array($search_value) ) {
+                        	if ( empty($search_value[0]) )
+								$search_value = '""';
+						} else {
+	                        if(intval($search_value)<0)
+	                            $search_value = "'".$search_value."'";
+	                        else
+	                            $search_value = intval($search_value);
+						}
+						// Handle multiple selection
+                        $related_filterfield = $filterfield;
                         if(isset($selects[$filter]))
                             $related_filterfield = '`'.$selects[$filter].'`.`'.$this->search_columns[$filter]['related_id'].'`';
                         if($this->search_columns[$filter]['real_name']!==false)
@@ -1613,7 +1622,17 @@ class WP_Admin_UI
                         if($this->search_columns[$filter]['group_related']!==false)
                             $having_sql[] = "{$related_filterfield} = {$search_value}";
                         else
-                            $other_sql[] = "{$related_filterfield} = {$search_value}";
+							if ( $search_value == '""' )
+                            	$other_sql[] = "{$related_filterfield} != {$search_value}";
+							else if ( is_array($search_value) ) {
+								$in_string = '';
+								foreach ( $search_value as $val ) {
+									$in_string .= "'" . $val . "',";
+								}
+								$in_string = substr($in_string, 0, -1);
+								$other_sql[] = "{$related_filterfield} IN (" . $in_string . ")";
+							} else
+                            	$other_sql[] = "{$related_filterfield} = {$search_value}";
                     }
                     else
                     {
@@ -1884,17 +1903,40 @@ jQuery(document).ready(function(){
                 {
                     if(!is_array($this->search_columns[$filter]['related']))
                     {
-                        $related = $wpdb->get_results('SELECT `'.$this->search_columns[$filter]['related_id'].'`,`'.$this->search_columns[$filter]['related_field'].'` FROM '.$this->search_columns[$filter]['related'].(!empty($this->search_columns[$filter]['related_sql'])?' '.$this->search_columns[$filter]['related_sql']:''));
+                    	// select distinct values to populate the filter field
+                    	// uses Related Field and Related Table fields in the Report Admin
+                    	$querystr = 'SELECT DISTINCT '.$this->search_columns[$filter]['related_field'].' FROM '.$this->search_columns[$filter]['related'].' ORDER BY '.$this->search_columns[$filter]['related_field'];
+                    	$related = $wpdb->get_results($querystr);
 ?>
             <label for="admin_ui_filter_<?php echo $filter; ?>"><?php echo $this->search_columns[$filter]['filter_label']; ?>:</label>
-            <select name="filter_<?php echo $filter; ?><?php echo (false!==$this->search_columns[$filter]['related_multiple']?'[]':''); ?>" id="admin_ui_filter_<?php echo $filter; ?>"<?php echo (false!==$this->search_columns[$filter]['related_multiple']?' size="10" style="height:auto;" MULTIPLE':''); ?>>
+            <!-- apply chosen select to select boxes -->
+			<script type="text/javascript">
+				jQuery(document).ready(function($) {
+					// apply chosen style
+					$(".chzn-select").data("placeholder","- Filter -").chosen();
+				});	
+			</script>
+            <select name="filter_<?php echo $filter; ?><?php echo (false!==$this->search_columns[$filter]['related_multiple']?'[]':''); ?>" id="admin_ui_filter_<?php echo $filter; ?>"<?php echo (false!==$this->search_columns[$filter]['related_multiple']?' size="10" style="height:auto;" MULTIPLE class="chzn-select"':''); ?>>
                 <option value="">-- Show All --</option>
 <?php
                         $selected = $this->get_var('filter_'.$filter,$this->search_columns[$filter]['filter_default']);
                         foreach($related as $option)
                         {
-?>
-                <option value="<?php echo $option->{$this->search_columns[$filter]['related_id']}; ?>"<?php echo ($option->{$this->search_columns[$filter]['related_id']}==$selected?' SELECTED':''); ?>><?php echo $option->{$this->search_columns[$filter]['related_field']}; ?></option>
+                        	// fix for selected items for multiple select
+                        	$is_selected = false;
+                        	if ( is_array($selected) ) {
+                        		foreach ($selected as $sel) {
+                        			if ($option->{$this->search_columns[$filter]['related_field']} == $sel) {
+                        				$is_selected = true;
+										break;
+                        			}
+                        		}                        	
+							} else {
+								if ($option->{$this->search_columns[$filter]['related_field']} == $selected)
+									$is_selected = true;
+							}
+?>							
+                <option value="<?php echo $option->{$this->search_columns[$filter]['related_field']}; ?>"<?php echo ($is_selected?' SELECTED':''); ?>><?php echo $option->{$this->search_columns[$filter]['related_field']}; ?></option>
 <?php
                         }
 ?>
@@ -2192,7 +2234,7 @@ table.widefat.fixed tbody.sortable tr { height:50px; }
         if(!empty($this->data)) foreach($this->data as $row)
         {
 ?>
-        <tr id="item-<?php //echo $row[$this->identifier]; ?>" class="iedit">
+        <tr id="item-<?php //echo $row['ID']; ?>" class="iedit">
 <?php
             foreach($columns as $column=>$attributes)
             {
