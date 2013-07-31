@@ -1734,7 +1734,7 @@ class WP_Admin_UI
         $sql = str_replace('%%ORDERBY%%',$ordersql,$sql);
         $sql = str_replace('%%LIMIT%%',$limitsql,$sql);
         $sql = str_replace('``','`',$sql);
-        $sql = str_replace('  ',' ',$sql);
+        $sql = str_replace('  ',' ',$sql);	
         if (false !== $this->sql_count) {
             $wheresql = $havingsql = $ordersql = $limitsql = '';
             $sql_count = ' '.str_replace(array("\n","\r",'  '),' ',' '.$this->sql_count).' ';
@@ -1917,7 +1917,7 @@ jQuery(document).ready(function(){
 				});	
 			</script>
             <select name="filter_<?php echo $filter; ?><?php echo (false!==$this->search_columns[$filter]['related_multiple']?'[]':''); ?>" id="admin_ui_filter_<?php echo $filter; ?>"<?php echo (false!==$this->search_columns[$filter]['related_multiple']?' size="10" style="height:auto;" MULTIPLE class="chzn-select"':''); ?>>
-                <option value="">-- Show All --</option>
+                <!--<option value="">-- Show All --</option>-->
 <?php
                         $selected = $this->get_var('filter_'.$filter,$this->search_columns[$filter]['filter_default']);
                         foreach($related as $option)
@@ -1949,7 +1949,7 @@ jQuery(document).ready(function(){
 ?>
             <label for="admin_ui_filter_<?php echo $filter; ?>"><?php echo $this->search_columns[$filter]['filter_label']; ?>:</label>
             <select name="filter_<?php echo $filter; ?><?php echo (false!==$this->search_columns[$filter]['related_multiple']?'[]':''); ?>" id="admin_ui_filter_<?php echo $filter; ?>"<?php echo (false!==$this->search_columns[$filter]['related_multiple']?' size="10" style="height:auto;" MULTIPLE':''); ?>>
-                <option value="">-- Show All --</option>
+                <!--<option value="">-- Show All --</option>-->
 <?php
                         $selected = $this->get_var('filter_'.$filter,$this->search_columns[$filter]['filter_default']);
                         foreach($related as $option_id=>$option)
