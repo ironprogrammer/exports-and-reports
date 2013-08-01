@@ -1859,8 +1859,11 @@ class WP_Admin_UI
             $this->export();
         if((!empty($this->data)||false!==$this->search_query||false!==$this->default_none)&&false!==$this->search)
         {
+        // clear action to prevent auto download on each subsequent search
+        unset( $_GET['action'] );
+        $qs = http_build_query( $_GET );
 ?>
-    <form id="posts-filter" action="" method="get">
+    <form id="posts-filter" action="<?php echo admin_url( 'admin.php?' .  htmlspecialchars( $qs ) ) ?>" method="get">
         <p class="search-box">
 <?php
             $excluded_filters = array();
