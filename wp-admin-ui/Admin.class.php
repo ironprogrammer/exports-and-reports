@@ -2053,9 +2053,14 @@ jQuery(document).ready(function(){
 ?>
             <strong>Export:</strong>
             <input type="button" value=" CSV " class="button" onclick="document.location='<?php echo $this->var_update(array('action'=>'export','export_type'=>'csv')); ?>';" />
+            <?php /* @todo move these into options
+            // remove tsv option
             <input type="button" value=" TSV " class="button" onclick="document.location='<?php echo $this->var_update(array('action'=>'export','export_type'=>'tsv')); ?>';" />
+            */ ?>
             <input type="button" value=" XML " class="button" onclick="document.location='<?php echo $this->var_update(array('action'=>'export','export_type'=>'xml')); ?>';" />
+            <?php /* // remove json option
             <input type="button" value=" JSON " class="button" onclick="document.location='<?php echo $this->var_update(array('action'=>'export','export_type'=>'json')); ?>';" />
+            */ ?>
 <?php
             }
 ?>
