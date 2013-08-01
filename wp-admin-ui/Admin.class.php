@@ -1882,10 +1882,9 @@ class WP_Admin_UI
                     if(false===$date_exists)
                     {
 ?>
-<link type="text/css" rel="stylesheet" href="<?php echo $this->assets_url; ?>/jquery/ui.datepicker.css" />
 <script type="text/javascript">
-jQuery(document).ready(function(){
-    jQuery.getScript('<?php echo $this->assets_url; ?>/jquery/ui.datepicker.js',function(){jQuery('input.admin_ui_date').datepicker();});
+jQuery(document).ready(function($){
+    $('input.admin_ui_date').datepicker();
 });
 </script>
 <?php

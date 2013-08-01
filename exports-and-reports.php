@@ -90,6 +90,17 @@ function exports_reports_init ()
         if(!empty($exports_reports_full_access))
             $current_user->add_cap($exports_reports_full_access);
     }
+
+    if ( is_admin() ) {
+        add_action( 'admin_print_styles', 'exports_reports_admin_styles' );
+        add_action( 'admin_enqueue_scripts', 'exports_reports_admin_scripts' );
+    }
+}
+function exports_reports_admin_styles() {
+    wp_enqueue_style( 'jquery-style', '//ajax.googleapis.com/ajax/libs/jqueryui/1.8.2/themes/smoothness/jquery-ui.css' );
+}
+function exports_reports_admin_scripts() {
+    wp_enqueue_script( 'jquery-ui-datepicker' );
 }
 function exports_reports_admin_menu ()
 {
