@@ -1604,10 +1604,7 @@ class WP_Admin_UI
                     {
                     	// filter value is coming in as an array, so need to check for it and get
                         $search_value = $this->sanitize($this->get_var('filter_'.$filter,$this->search_columns[$filter]['filter_default']));
-                        if ( is_array($search_value) ) {
-                        	if ( empty($search_value[0]) )
-								$search_value = '""';
-						} else {
+                        if ( !is_array($search_value) ) {
 	                        if(intval($search_value)<0)
 	                            $search_value = "'".$search_value."'";
 	                        else
@@ -1627,10 +1624,12 @@ class WP_Admin_UI
 							else if ( is_array($search_value) ) {
 								$in_string = '';
 								foreach ( $search_value as $val ) {
-									$in_string .= "'" . $val . "',";
+									if ( !empty($val) )
+										$in_string .= "'" . $val . "',";
 								}
 								$in_string = substr($in_string, 0, -1);
-								$other_sql[] = "{$related_filterfield} IN (" . $in_string . ")";
+								if ( $in_string )
+									$other_sql[] = "{$related_filterfield} IN (" . $in_string . ")";
 							} else
                             	$other_sql[] = "{$related_filterfield} = {$search_value}";
                     }
@@ -1923,7 +1922,7 @@ jQuery(document).ready(function($){
 <?php
                         $selected = $this->get_var('filter_'.$filter,$this->search_columns[$filter]['filter_default']);
                         foreach($related as $option)
-                        {
+                        {	
                         	// fix for selected items for multiple select
                         	$is_selected = false;
                         	if ( is_array($selected) ) {
@@ -1970,7 +1969,7 @@ jQuery(document).ready(function($){
 ?>
             <label for="admin_ui_filter_<?php echo $filter; ?>"><?php echo $this->search_columns[$filter]['filter_label']; ?>:</label>
             <select name="filter_<?php echo $filter; ?>" id="admin_ui_filter_<?php echo $filter; ?>">
-                <option value="">-- Show All --</option>
+                <!--<option value="">-- Show All --</option>-->
                 <option value="1"<?php echo ((1 == $this->get_var('filter_'.$filter,$this->search_columns[$filter]['filter_default'])) ? ' SELECTED' : ''); ?>>Yes</option>
                 <option value="0"<?php echo (('' != $this->get_var('filter_'.$filter,$this->search_columns[$filter]['filter_default']) && 0 == $this->get_var('filter_'.$filter,$this->search_columns[$filter]['filter_default'])) ? ' SELECTED' : ''); ?>>No</option>
             </select>
