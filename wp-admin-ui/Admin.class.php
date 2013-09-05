@@ -281,8 +281,6 @@ class WP_Admin_UI
                 $output[$key] = $this->sanitize($val);
             }
         }
-        elseif (is_numeric($input))
-            $output = $input;
         elseif (!empty($input))
             $output = $wpdb->_real_escape(trim($input));
         return $output;
@@ -1736,7 +1734,7 @@ class WP_Admin_UI
         $sql = str_replace('%%LIMIT%%',$limitsql,$sql);
         $sql = str_replace('``','`',$sql);
         $sql = str_replace('  ',' ',$sql);
-        //var_dump($sql);
+        $sql = str_replace('&','&amp;',$sql);
         if (false !== $this->sql_count) {
             $wheresql = $havingsql = $ordersql = $limitsql = '';
             $sql_count = ' '.str_replace(array("\n","\r",'  '),' ',' '.$this->sql_count).' ';
@@ -1909,7 +1907,7 @@ jQuery(document).ready(function($){
                     {
                     	// select distinct values to populate the filter field
                     	// uses Related Field and Related Table fields in the Report Admin
-                    	$querystr = 'SELECT DISTINCT '.$this->search_columns[$filter]['related_field'].' FROM '.$this->search_columns[$filter]['related'].' ORDER BY '.$this->search_columns[$filter]['related_field'];
+                    	$querystr = 'SELECT DISTINCT '.$this->search_columns[$filter]['related_field'].' FROM '.$this->search_columns[$filter]['related'].' '.$this->search_columns[$filter]['related_sql'].' ORDER BY '.$this->search_columns[$filter]['related_field'];
                     	$related = $wpdb->get_results($querystr);
 ?>
             <label for="admin_ui_filter_<?php echo $filter; ?>"><?php echo $this->search_columns[$filter]['filter_label']; ?>:</label>
@@ -1930,12 +1928,16 @@ jQuery(document).ready(function($){
                         	$is_selected = false;
                         	if ( is_array($selected) ) {
                         		foreach ($selected as $sel) {
+                        			// replace & with &amp; for ampersands
+                        			$sel = str_replace('&','&amp;',$sel);
                         			if ($option->{$this->search_columns[$filter]['related_field']} == $sel) {
                         				$is_selected = true;
 										break;
                         			}
                         		}                        	
 							} else {
+                    			// replace & with &amp; for ampersands
+                    			$selected = str_replace('&','&amp;',$selected);
 								if ($option->{$this->search_columns[$filter]['related_field']} == $selected)
 									$is_selected = true;
 							}
@@ -1972,7 +1974,7 @@ jQuery(document).ready(function($){
 ?>
             <label for="admin_ui_filter_<?php echo $filter; ?>"><?php echo $this->search_columns[$filter]['filter_label']; ?>:</label>
             <select name="filter_<?php echo $filter; ?>" id="admin_ui_filter_<?php echo $filter; ?>">
-                <option value="">-- Show All --</option>
+                <!--<option value="">-- Show All --</option>-->
                 <option value="1"<?php echo ((1 == $this->get_var('filter_'.$filter,$this->search_columns[$filter]['filter_default'])) ? ' SELECTED' : ''); ?>>Yes</option>
                 <option value="0"<?php echo (('' != $this->get_var('filter_'.$filter,$this->search_columns[$filter]['filter_default']) && 0 == $this->get_var('filter_'.$filter,$this->search_columns[$filter]['filter_default'])) ? ' SELECTED' : ''); ?>>No</option>
             </select>
