@@ -231,6 +231,7 @@ class WP_Admin_UI
     function var_update ($array=false,$allowed=false,$url=false,$exclusive=false)
     {
         $excluded = array('do','id','pg','search_query','order','order_dir','limit','action','export','export_type','export_delimiter','remove_export','updated','duplicate');
+		if ( isset($array['action']) && $array['action'] == 'export' ) unset($excluded[3]);	// keep search_query for export operations
         if(false===$allowed)
             $allowed = array();
         if(!isset($_GET))
