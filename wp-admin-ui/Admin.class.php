@@ -282,6 +282,8 @@ class WP_Admin_UI
                 $output[$key] = $this->sanitize($val);
             }
         }
+		elseif ($input=="0")
+			$output = $input;
         elseif (!empty($input))
             $output = $wpdb->_real_escape(trim($input));
         return $output;
@@ -1188,39 +1190,200 @@ class WP_Admin_UI
                 $fp = fopen($this->export_dir.'/'.$export_file,'a+');
                 $head = array();
                 $first = true;
-                foreach($this->export_columns as $key=>$attributes)
-                {
-                    if(!is_array($attributes)) {
-                        $key = $attributes;
-                        $attributes = $this->setup_column($key);
-                    }
-                    if(false===$attributes['display']&&false===$attributes['export'])
-                        continue;
-                    if($first)
-                    {
-                        $attributes['label'] .= ' ';
-                        $first = false;
-                    }
-                    $head[] = $attributes['label'];
-                }
-                fputcsv($fp,$head,",");
-                foreach($this->full_data as $item)
-                {
-                    $line = array();
-                    foreach($this->export_columns as $key=>$attributes)
-                    {
-                        if(!is_array($attributes)) {
-                            $key = $attributes;
-                            $attributes = $this->setup_column($key);
-                        }
-                        if(false===$attributes['display']&&false===$attributes['export'])
-                            continue;
-                        $item[$key] = $this->field_value($item[$key],$key,$attributes);
-                        if(false!==$attributes['custom_display']&&function_exists("{$attributes['custom_display']}"))
-                            $item[$key] = $attributes['custom_display']($item[$key],$item,$key,$attributes,$this);
-                        $line[] = str_replace(array("\r","\n"),' ',$item[$key]);
-                    }
-                    fputcsv($fp,$line);
+				
+				if (sanitize_title($this->items) == 'daily-published-activities') {
+					 foreach($this->export_columns as $key=>$attributes)
+	                {
+	                    if(!is_array($attributes)) {
+	                        $key = $attributes;
+	                        $attributes = $this->setup_column($key);
+	                    }
+	                    if(false===$attributes['export'])
+	                        continue;
+	                    $head[] = $attributes['label'];
+	                }
+					// add volunteer columns
+					$head[] = 'Role';
+					$head[] = 'Shift';
+					$head[] = 'Name';
+					$head[] = 'Phone';
+					$head[] = 'Email';
+					$head[] = 'View';
+					$head[] = 'Edit';
+	                fputcsv($fp,$head,",");
+					
+					global $EM_Event;
+	                foreach($this->full_data as $item)
+	                {
+	                    foreach($this->export_columns as $key=>$attributes)
+	                    {
+	                        if(!is_array($attributes)) {
+	                            $key = $attributes;
+	                            $attributes = $this->setup_column($key);
+	                        }
+							
+							if ($key == 'ID') {
+								$id = $this->field_value($item[$key],$key,$attributes);
+								continue;
+							} elseif ($key == 'Date') {
+								$date = $this->field_value($item[$key],$key,$attributes);
+								continue;
+							} elseif ($key == 'ActivityName') {
+								$activity_name = $this->field_value($item[$key],$key,$attributes);
+								continue;
+							} elseif ($key == 'StagingArea') {
+								$staging_area = $this->field_value($item[$key],$key,$attributes);
+								continue;
+							} elseif ($key == 'Volunteers') {
+							    // get event object
+								$EM_Event = em_get_event( $id, 'post_id' );
+								$is_firewatch = 'fire-watch' === $EM_Event->output('#_CATEGORYSLUG');
+								$is_specialevent = 'special-events' === $EM_Event->output('#_CATEGORYSLUG');
+								// get link URLs
+								$view_link = esc_url($EM_Event->get_permalink());
+								$edit_link = esc_url($EM_Event->get_edit_url());
+								
+								if ( $is_firewatch ) {
+									$volunteer_spaces = get_field('firewatch_spaces', $id);
+									
+									if ( is_array($volunteer_spaces) ) {
+										foreach ( $volunteer_spaces as $volunteer_space ) {
+											$spaces_needed = $volunteer_space['spaces'];
+											$area = $volunteer_space['staging_area'];
+											$shift = $volunteer_space['shift'];
+											$volunteers = $volunteer_space['volunteers'];										
+											
+											$i = 0;
+											if ( is_array($volunteers) ) {
+												foreach( $volunteers as $volunteer ) {
+													// compose data row
+													$this->write_csv_row($fp, $date, $activity_name, $staging_area, $area->post_title, $shift, $volunteer, $view_link, $edit_link);
+																	
+													$i++;
+												}
+											}
+											
+											while ( $i < $spaces_needed ) {
+												// compose data row
+												$this->write_csv_row($fp, $date, $activity_name, $staging_area, $area->post_title, $shift, NULL, $view_link, $edit_link);
+												
+												$i++;
+											}
+										}
+									}
+								} elseif ( $is_specialevent ) {
+									// add lead
+									$lead = get_field ( 'lead', $id );
+									// compose data row
+									$this->write_csv_row($fp, $date, $activity_name, $staging_area, 'Lead', '', $lead, $view_link, $edit_link);			
+									
+									$volunteer_spaces = get_field('volunteer_spaces', $id);
+									if ( is_array($volunteer_spaces) ) {
+										foreach ( $volunteer_spaces as $volunteer_space ) {
+											$spaces_needed = $volunteer_space['spaces'];
+											$duty = $volunteer_space['duty'];
+											$shift = $volunteer_space['shift'];
+											$volunteers = $volunteer_space['volunteers'];										
+											
+											$i = 0;
+											if ( is_array($volunteers) ) {
+												foreach( $volunteers as $volunteer ) {
+													// compose data row
+													$this->write_csv_row($fp, $date, $activity_name, $staging_area, $duty, $shift, $volunteer, $view_link, $edit_link);
+													
+													$i++;
+												}
+											}
+											
+											while ( $i < $spaces_needed ) {
+												// compose data row
+												$this->write_csv_row($fp, $date, $activity_name, $staging_area, $duty, $shift, NULL, $view_link, $edit_link);
+												
+												$i++;
+											}
+										}
+									}		
+								} else {
+									// add lead
+									$lead = get_field ( 'lead', $id );
+									// compose data row
+									$this->write_csv_row($fp, $date, $activity_name, $staging_area, 'Lead', '', $lead, $view_link, $edit_link);
+									
+									// loop through for each volunteer space
+									$volunteer_spaces = get_field('volunteer_spaces', $id);
+									if ( is_array($volunteer_spaces) ) {
+										foreach ( $volunteer_spaces as $volunteer_space ) {
+											$spaces_needed = $volunteer_space['spaces'];
+											$certification = $volunteer_space['certification'];
+											if ( $certification ) {
+												$certification_id = $certification->ID;
+												$certification_title = $certification->post_title;
+											} else {
+												$certification_id = 0;
+												$certification_title = 'Any';
+											}
+											$volunteers = $volunteer_space['volunteers'];					
+											
+											$i = 0;
+											if ( is_array($volunteers) ) {
+												foreach( $volunteers as $volunteer ) {
+													// compose data row
+													$this->write_csv_row($fp, $date, $activity_name, $staging_area, $certification_title, '', $volunteer, $view_link, $edit_link);
+													
+													$i++;
+												}
+											}
+											
+											while ( $i < $spaces_needed ) {
+												// compose data row
+												$this->write_csv_row($fp, $date, $activity_name, $staging_area, $certification_title, '', NULL, $view_link, $edit_link);
+												
+												$i++;
+											}
+										}
+									}
+								}							
+							} else {
+								continue;
+							}
+	                    }
+	                }					
+					
+				} else {
+	                foreach($this->export_columns as $key=>$attributes)
+	                {
+	                    if(!is_array($attributes)) {
+	                        $key = $attributes;
+	                        $attributes = $this->setup_column($key);
+	                    }
+	                    if(false===$attributes['display']&&false===$attributes['export'])
+	                        continue;
+	                    if($first)
+	                    {
+	                        $attributes['label'] .= ' ';
+	                        $first = false;
+	                    }
+	                    $head[] = $attributes['label'];
+	                }
+	                fputcsv($fp,$head,",");
+	                foreach($this->full_data as $item)
+	                {
+	                    $line = array();
+	                    foreach($this->export_columns as $key=>$attributes)
+	                    {
+	                        if(!is_array($attributes)) {
+	                            $key = $attributes;
+	                            $attributes = $this->setup_column($key);
+	                        }
+	                        if(false===$attributes['display']&&false===$attributes['export'])
+	                            continue;
+	                        $item[$key] = $this->field_value($item[$key],$key,$attributes);
+	                        if(false!==$attributes['custom_display']&&function_exists("{$attributes['custom_display']}"))
+	                            $item[$key] = $attributes['custom_display']($item[$key],$item,$key,$attributes,$this);
+	                        $line[] = str_replace(array("\r","\n"),' ',$item[$key]);
+	                    }
+	                    fputcsv($fp,$line);
+	                }
                 }
                 fclose($fp);
                 $this->message('<strong>Success:</strong> Your export is ready, the download should begin in a few moments. If it doesn\'t, <a href="'.$this->export_url.urlencode($export_file).'" target="_blank">click here to access your CSV export file</a>.<br /><br />When you are done with your export, <a href="'.$this->var_update(array('remove_export'=>urlencode($export_file),'action'=>'export')).'">click here to remove it</a>, otherwise the export will be deleted within 24 hours of generation.');
@@ -1426,6 +1589,32 @@ class WP_Admin_UI
         }
         $this->do_hook('post_export',$export_file);
     }
+	function write_csv_row($fp, $date, $activity_name, $staging_area, $role, $shift, $volunteer, $view_link, $edit_link) {
+		if (is_null($volunteer)) {
+			$display_name = '';
+			$mobile = '';
+			$email = '';
+		} else {
+			$user_id = $volunteer['ID'];
+			$display_name = $volunteer['display_name'];
+			$email = $volunteer['user_email'];
+			$mobile = get_user_meta( $user_id, 'irnl_mobile', true );
+		}
+		
+		// compose data row
+		$line = array();
+		$line[] = str_replace(array("\r","\n"),' ',$date);
+		$line[] = str_replace(array("\r","\n"),' ',$activity_name);
+		$line[] = str_replace(array("\r","\n"),' ',$staging_area);
+		$line[] = $role;
+		$line[] = $shift;
+		$line[] = $display_name;
+		$line[] = $mobile;
+		$line[] = $email;
+		$line[] = $view_link;
+		$line[] = $edit_link;
+		fputcsv($fp,$line);		
+	}
     function get_row ($id=false)
     {
         if(isset($this->custom['row'])&&function_exists("{$this->custom['row']}"))
@@ -1646,8 +1835,9 @@ class WP_Admin_UI
                 {
                     if($this->search_columns[$filter]['group_related']!==false)
                         $having_sql[] = "$filterfield LIKE '%".$this->sanitize($this->get_var('filter_'.$filter,$this->search_columns[$filter]['filter_default']))."%'";
-                    else
+                    else {
                         $other_sql[] = "$filterfield LIKE '%".$this->sanitize($this->get_var('filter_'.$filter,$this->search_columns[$filter]['filter_default']))."%'";
+					}
                 }
             }
             if(!empty($other_sql))
@@ -1736,6 +1926,7 @@ class WP_Admin_UI
         $sql = str_replace('``','`',$sql);
         $sql = str_replace('  ',' ',$sql);
         $sql = str_replace('&','&amp;',$sql);
+        //var_dump($sql);
         if (false !== $this->sql_count) {
             $wheresql = $havingsql = $ordersql = $limitsql = '';
             $sql_count = ' '.str_replace(array("\n","\r",'  '),' ',' '.$this->sql_count).' ';
@@ -2393,7 +2584,8 @@ table.widefat.fixed tbody.sortable tr { height:50px; }
         }
 ?>
 <script type="text/javascript">
-jQuery('table.widefat tbody tr:even').addClass('alternate');
+<?php // added id 'item-' to selector, or else the class will be added to tr tags in the 'Daily Published Activity' report volunteer inner table ?>
+jQuery('table.widefat tbody tr#item-:even').addClass('alternate');
 <?php
         if($reorder==1&&false!==$this->reorder)
         {
