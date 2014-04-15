@@ -1240,8 +1240,8 @@ class WP_Admin_UI
 								$is_firewatch = 'fire-watch' === $EM_Event->output('#_CATEGORYSLUG');
 								$is_specialevent = 'special-events' === $EM_Event->output('#_CATEGORYSLUG');
 								// get link URLs
-								$view_link = esc_url($EM_Event->get_permalink());
-								$edit_link = esc_url($EM_Event->get_edit_url());
+								$view_link = $EM_Event->get_permalink();
+								$edit_link = $EM_Event->get_edit_url();
 								
 								if ( $is_firewatch ) {
 									$volunteer_spaces = get_field('firewatch_spaces', $id);
