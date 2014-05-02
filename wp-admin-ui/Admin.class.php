@@ -2404,7 +2404,7 @@ table.widefat.fixed tbody.sortable tr { height:50px; }
         }
 ?>
 <script type="text/javascript">
--<?php // added id 'item-' to selector, or else the class will be added to tr tags in the 'Daily Published Activity' report volunteer inner table ?>
+<?php // added id 'item-' to selector, or else the class will be added to tr tags in the 'Daily Published Activity' report volunteer inner table ?>
 jQuery('table.widefat tbody tr#item-:even').addClass('alternate');
 <?php
         if($reorder==1&&false!==$this->reorder)
