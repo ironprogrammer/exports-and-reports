@@ -1186,54 +1186,55 @@ class WP_Admin_UI
         {
             if($this->export_type=='csv')
             {
+            	// export file name
                 $export_file = str_replace('-','_',sanitize_title($this->items)).'_'.date_i18n('m-d-Y_h-i-sa').'.csv';
-                $fp = fopen($this->export_dir.'/'.$export_file,'a+');
-                $head = array();
-				$is_custom_report = false;
-                $first = true;
 				
-				$args = array( $this, $head, $fp, $is_custom_report);
-				do_action_ref_array( 'irnl_export_report_csv', array(&$args) );
-				
-				if ( !$args[3] ) {	// not a custom report
-	                foreach($this->export_columns as $key=>$attributes)
-	                {
-	                    if(!is_array($attributes)) {
-	                        $key = $attributes;
-	                        $attributes = $this->setup_column($key);
-	                    }
-	                    if(false===$attributes['display']&&false===$attributes['export'])
-	                        continue;
-	                    if($first)
-	                    {
-	                        $attributes['label'] .= ' ';
-	                        $first = false;
-	                    }
-	                    $head[] = $attributes['label'];
+				/*if ( false ) { // @note use this for asynchronous export if needed
+					global $current_user;
+					wp_schedule_single_event( time(), 'irnl_async_csv_export', 
+						array( $this->full_data, $this->export_columns, $this->search, $this->filters, $this->related, $this->export_url, $this->export_dir, $export_file, $current_user->user_email ) );
+					$this->message('Your export has started running. Once it finishes, a download link will be sent to your email.');
+				} else { */
+                	$fp = fopen($this->export_dir.'/'.$export_file,'a+');
+					$head = array();
+					$is_custom_report = false;
+	                $first = true;
+					
+					$args = array( $this, $head, $fp, $is_custom_report);
+					do_action_ref_array( 'irnl_export_report_csv', array(&$args) );
+					
+					if ( !$args[3] ) {	// not a custom report
+		                foreach($this->export_columns as $key=>$attributes)
+		                {
+		                    if(!is_array($attributes)) {
+		                        $key = $attributes;
+		                        $attributes = $this->setup_column($key);
+		                    }
+		                    if(false===$attributes['display']&&false===$attributes['export'])
+		                        continue;
+		                    if($first)
+		                    {
+		                        $attributes['label'] .= ' ';
+		                        $first = false;
+		                    }
+		                    $head[] = $attributes['label'];
+		                }
+		                fputcsv($fp,$head,",");
+						
+					    foreach($this->full_data as $item)
+					    {
+					        $line = array();
+					        foreach($this->export_columns as $key=>$attributes) {
+					        	$line[] = str_replace(array("\r","\n"),' ',$item[$key]);
+					        }
+					        fputcsv($fp,$line);
+					    }						
 	                }
-	                fputcsv($fp,$head,",");
-	                foreach($this->full_data as $item)
-	                {
-	                    $line = array();
-	                    foreach($this->export_columns as $key=>$attributes)
-	                    {
-	                        if(!is_array($attributes)) {
-	                            $key = $attributes;
-	                            $attributes = $this->setup_column($key);
-	                        }
-	                        if(false===$attributes['display']&&false===$attributes['export'])
-	                            continue;
-	                        $item[$key] = $this->field_value($item[$key],$key,$attributes);
-	                        if(false!==$attributes['custom_display']&&function_exists("{$attributes['custom_display']}"))
-	                            $item[$key] = $attributes['custom_display']($item[$key],$item,$key,$attributes,$this);
-	                        $line[] = str_replace(array("\r","\n"),' ',$item[$key]);
-	                    }
-	                    fputcsv($fp,$line);
-	                }
-                }
-                fclose($fp);
-                $this->message('<strong>Success:</strong> Your export is ready, the download should begin in a few moments. If it doesn\'t, <a href="'.$this->export_url.urlencode($export_file).'" target="_blank">click here to access your CSV export file</a>.<br /><br />When you are done with your export, <a href="'.$this->var_update(array('remove_export'=>urlencode($export_file),'action'=>'export')).'">click here to remove it</a>, otherwise the export will be deleted within 24 hours of generation.');
-                echo '<script type="text/javascript">window.open("'.$this->export_url.urlencode($export_file).'");</script>';
+                	fclose($fp);
+					
+	                $this->message('<strong>Success:</strong> Your export is ready, the download should begin in a few moments. If it doesn\'t, <a href="'.$this->export_url.urlencode($export_file).'" target="_blank">click here to access your CSV export file</a>.<br /><br />When you are done with your export, <a href="'.$this->var_update(array('remove_export'=>urlencode($export_file),'action'=>'export')).'">click here to remove it</a>, otherwise the export will be deleted within 24 hours of generation.');
+	                echo '<script type="text/javascript">window.open("'.$this->export_url.urlencode($export_file).'");</script>';
+	            //}
             }
             elseif($this->export_type=='tsv')
             {
@@ -2074,9 +2075,9 @@ jQuery(document).ready(function($){
             <?php /* @todo move these into options
             // remove tsv option
             <input type="button" value=" TSV " class="button" onclick="document.location='<?php echo $this->var_update(array('action'=>'export','export_type'=>'tsv')); ?>';" />
-            */ ?>
+			// remove xml option
             <input type="button" value=" XML " class="button" onclick="document.location='<?php echo $this->var_update(array('action'=>'export','export_type'=>'xml')); ?>';" />
-            <?php /* // remove json option
+            // remove json option
             <input type="button" value=" JSON " class="button" onclick="document.location='<?php echo $this->var_update(array('action'=>'export','export_type'=>'json')); ?>';" />
             */ ?>
 <?php
@@ -2404,7 +2405,6 @@ table.widefat.fixed tbody.sortable tr { height:50px; }
         }
 ?>
 <script type="text/javascript">
-<?php // added id 'item-' to selector, or else the class will be added to tr tags in the 'Daily Published Activity' report volunteer inner table ?>
 jQuery('table.widefat tbody tr#item-:even').addClass('alternate');
 <?php
         if($reorder==1&&false!==$this->reorder)
