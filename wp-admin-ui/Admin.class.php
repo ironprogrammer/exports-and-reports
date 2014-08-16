@@ -1225,15 +1225,20 @@ class WP_Admin_UI
 					    {
 					        $line = array();
 					        foreach($this->export_columns as $key=>$attributes) {
-					        	if(!is_array($attributes)) {
-		                            $key = $attributes;
-		                            $attributes = $this->setup_column($key);
-		                        }
-		                        if(false===$attributes['display']&&false===$attributes['export'])
-		                            continue;
-		                        $item[$key] = $this->field_value($item[$key],$key,$attributes);
-		                        if(false!==$attributes['custom_display']&&function_exists("{$attributes['custom_display']}"))
-		                            $item[$key] = $attributes['custom_display']($item[$key],$item,$key,$attributes,$this);
+					        	if ($this->report_id == '22' || $this->report_id == '18') {
+					        		// report 22: OC Parks volunteer transition
+					        		// report 18: daily published activities
+					        		// these reports have columns with custom display functions
+						        	if(!is_array($attributes)) {
+			                            $key = $attributes;
+			                            $attributes = $this->setup_column($key);
+			                        }
+			                        if(false===$attributes['display']&&false===$attributes['export'])
+			                            continue;
+			                        $item[$key] = $this->field_value($item[$key],$key,$attributes);
+			                        if(false!==$attributes['custom_display']&&function_exists("{$attributes['custom_display']}"))
+			                            $item[$key] = $attributes['custom_display']($item[$key],$item,$key,$attributes,$this);
+								}
 		                        $line[] = str_replace(array("\r","\n"),' ',$item[$key]);
 					        }
 					        fputcsv($fp,$line);
