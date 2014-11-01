@@ -1225,8 +1225,9 @@ class WP_Admin_UI
 					    {
 					        $line = array();
 					        foreach($this->export_columns as $key=>$attributes) {
-					        	if ($this->report_id == '22' || $this->report_id == '18') {
+					        	if ($this->report_id == '22' || $this->report_id == '18' || $this->report_id == '17') {
 					        		// report 22: OC Parks volunteer transition
+                                    // report 17: published activities
 					        		// report 18: daily published activities
 					        		// these reports have columns with custom display functions
 						        	if(!is_array($attributes)) {
