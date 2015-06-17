@@ -1225,10 +1225,11 @@ class WP_Admin_UI
 					    {
 					        $line = array();
 					        foreach($this->export_columns as $key=>$attributes) {
-					        	if ($this->report_id == '22' || $this->report_id == '18' || $this->report_id == '17') {
+					        	if ($this->report_id == '22' || $this->report_id == '18' || $this->report_id == '17' || $this->report_id == '23') {
 					        		// report 22: OC Parks volunteer transition
                                     // report 17: published activities
 					        		// report 18: daily published activities
+                                    // report 23: zoho report
 					        		// these reports have columns with custom display functions
 						        	if(!is_array($attributes)) {
 			                            $key = $attributes;
@@ -1240,6 +1241,8 @@ class WP_Admin_UI
 			                        if(false!==$attributes['custom_display']&&function_exists("{$attributes['custom_display']}"))
 			                            $item[$key] = $attributes['custom_display']($item[$key],$item,$key,$attributes,$this);
 								}
+                                if(false===$attributes['display']&&false===$attributes['export'])
+                                    continue;
 		                        $line[] = str_replace(array("\r","\n"),' ',$item[$key]);
 					        }
 					        fputcsv($fp,$line);
@@ -1470,7 +1473,7 @@ class WP_Admin_UI
     }
     function get_data ($full=false)
     {
-        if(isset($this->custom['data'])&&function_exists("{$this->custom['data']}"))
+        if(isset($this->custom['data'])&&function_exists("$wpdb->prefix{$this->custom['data']}"))
             return call_user_func( $this->custom['data'],$this);
         if(false===$this->table&&false===$this->sql)
             return $this->error('<strong>Error:</strong> Invalid Configuration - Missing "table" definition.');
@@ -1761,7 +1764,7 @@ class WP_Admin_UI
         $sql = str_replace('%%LIMIT%%',$limitsql,$sql);
         $sql = str_replace('``','`',$sql);
         $sql = str_replace('  ',' ',$sql);
-        $sql = str_replace('&','&amp;',$sql);
+        //$sql = str_replace('&','&amp;',$sql);
         //var_dump($sql);
         if (false !== $this->sql_count) {
             $wheresql = $havingsql = $ordersql = $limitsql = '';
